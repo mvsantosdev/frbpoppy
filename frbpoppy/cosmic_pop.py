@@ -28,6 +28,7 @@ class CosmicPopulation(Population):
                  emission_range=[10e6, 10e9],
                  lum_range=[1e40, 1e45],
                  lum_index=0,
+                 lum_scale = None,
                  n_model='sfr',
                  alpha=-1.5,
                  w_model='lognormal',
@@ -59,6 +60,7 @@ class CosmicPopulation(Population):
                 sources should emit the given bolometric luminosity.
             lum_range (list): Bolometric luminosity (distance) range [erg/s].
             lum_index (float): Power law index.
+            lum_scale (float): Schechter Luminosity Scale (L_*).
             n_model (str): Number density model. Either 'vol_co', 'sfr' or
                 'smd'.
             alpha (float): Desired logN/logS of perfectly detected population.
@@ -90,6 +92,7 @@ class CosmicPopulation(Population):
         self.lum_max = lum_range[1]
         self.lum_min = lum_range[0]
         self.lum_pow = lum_index
+        self.lum_scale = lum_scale
         self.name = name
         self.n_gen = int(n_gen)
         self.n_model = n_model
@@ -217,10 +220,20 @@ class CosmicPopulation(Population):
         """Generate luminosities."""
         frbs = self.frbs
         # Add bolometric luminosity [erg/s]
-        frbs.lum_bol = dis.powerlaw(self.lum_min,
-                                    self.lum_max,
-                                    self.lum_pow,
-                                    shape).astype(np.float64)
+        
+        if self.lum_scale != None:
+            
+            frbs.lum_bol = self.lum_scale * dis.schechter(self.lum_min/self.lum_scale,
+                                                          self.lum_max/self.lum_scale,
+                                                          self.lum_pow,
+                                                          shape).astype(np.float64)
+            
+        else:
+        
+            frbs.lum_bol = dis.powerlaw(self.lum_min,
+                                        self.lum_max,
+                                        self.lum_pow,
+                                        shape).astype(np.float64)
 
     def gen_si(self, shape):
         """Generate spectral indices."""

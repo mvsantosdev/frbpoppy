@@ -4,6 +4,50 @@ import math
 from scipy.stats import truncnorm
 import frbpoppy.precalc as pc
 
+from scipy.special import gamma, gammainc, gammaincinv
+
+def schechter(low, high, power, shape=1):
+    """
+    Return random variables distributed according to Schechter luminosity function.
+
+    p(x) = x^power exp(-x) dx / k
+    
+    k: Normalization factor.
+    k = Gamma(power + 1, )
+
+    Args:
+        low (float): Lower limit of distribution
+        high (float): Higher limit of distribution
+        power (float): Power of Schechter luminosity function (\alpha).
+        shape (int/tuple): Shape of array to be generated. Can also be a int.
+
+    Returns:
+        array: Random variable picked from Schechter luminosity function.
+
+    """
+    if low > high:
+        low, high = high, low
+
+    if isinstance(shape, tuple):
+        n_gen = np.prod(shape)
+    else:
+        n_gen = shape
+        
+    power1 = power + 1
+
+    gamma_low = gammainc(power1, low)
+    gamma_high = gammainc(power1, high)
+    
+    u = np.random.random(n_gen)
+    
+    arg = gamma_low + (gamma_high - gamma_low)*u
+    
+    pl = gammaincinv(power1, arg)
+
+    if isinstance(shape, tuple):
+        return pl.reshape(shape)
+
+    return pl
 
 def powerlaw(low, high, power, shape=1):
     """
@@ -28,39 +72,19 @@ def powerlaw(low, high, power, shape=1):
 
     if power == 0 or low == high:
         return 10**np.random.uniform(np.log10(low), np.log10(high), shape)
-
-    def sample(n_gen):
-        pl = np.random.uniform(0, 1, n_gen)**(1/power)
-        if power > 0:
-            addition = np.log10(high)
-        else:
-            addition = np.log10(low)
-        log_pl = np.log10(pl) + addition
-        pl = 10**log_pl
-        return pl
-
-    def accept(pl):
-        if power > 0:
-            return pl >= low
-        else:
-            return pl <= high
+    
+    n_gen = np.prod(shape) if isinstance(shape, tuple) else shape
+    
+    u = np.random.random(n_gen)
+    
+    lown = low**power
+    highn = high**power
+    
+    pl = (lown + (highn - lown)*u)**(1/power)
 
     if isinstance(shape, tuple):
-        n_gen = shape[0] * shape[1]
-    else:
-        n_gen = shape
-
-    pl = sample(n_gen)
-    mask = accept(pl)
-    reject, = np.where(~mask)
-    while reject.size > 0:
-        fill = sample(reject.size)
-        mask = accept(fill)
-        pl[reject[mask]] = fill[mask]
-        reject = reject[~mask]
-
-    if isinstance(shape, tuple):
-        pl = pl.reshape(shape)
+        
+        return pl.reshape(shape)
 
     return pl
 
