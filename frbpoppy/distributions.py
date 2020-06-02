@@ -4,7 +4,7 @@ import math
 from scipy.stats import truncnorm
 import frbpoppy.precalc as pc
 
-from scipy.special import gamma, gammainc, gammaincinv
+from scipy.integrate import odeint
 
 def schechter(low, high, power, shape=1):
     """
@@ -27,26 +27,16 @@ def schechter(low, high, power, shape=1):
     """
     if low > high:
         low, high = high, low
-
-    if isinstance(shape, tuple):
-        n_gen = np.prod(shape)
-    else:
-        n_gen = shape
         
-    power1 = power + 1
-
-    gamma_low = gammainc(power1, low)
-    gamma_high = gammainc(power1, high)
+    LL = np.logspace(np.log10(low/high), 0, 100)
     
-    u = np.random.random(n_gen)
+    cdf = odeint(lambda y, x, p: (x**p) * np.exp(-x),
+                 0.0, LL, args=(power,)).ravel()
     
-    arg = gamma_low + (gamma_high - gamma_low)*u
+    u = np.random.random(size = shape)
     
-    pl = gammaincinv(power1, arg)
-
-    if isinstance(shape, tuple):
-        return pl.reshape(shape)
-
+    pl = np.interp(x = u, xp = cdf/cdf[-1], fp = high * LL)
+    
     return pl
 
 def powerlaw(low, high, power, shape=1):

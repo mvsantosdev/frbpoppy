@@ -28,7 +28,7 @@ class CosmicPopulation(Population):
                  emission_range=[10e6, 10e9],
                  lum_range=[1e40, 1e45],
                  lum_index=0,
-                 lum_scale = None,
+                 lum_function = 'schechter',
                  n_model='sfr',
                  alpha=-1.5,
                  w_model='lognormal',
@@ -60,7 +60,7 @@ class CosmicPopulation(Population):
                 sources should emit the given bolometric luminosity.
             lum_range (list): Bolometric luminosity (distance) range [erg/s].
             lum_index (float): Power law index.
-            lum_scale (float): Schechter Luminosity Scale (L_*).
+            lum_function (float): Luminosity function, 'schechter' or 'powerlaw'.
             n_model (str): Number density model. Either 'vol_co', 'sfr' or
                 'smd'.
             alpha (float): Desired logN/logS of perfectly detected population.
@@ -92,7 +92,7 @@ class CosmicPopulation(Population):
         self.lum_max = lum_range[1]
         self.lum_min = lum_range[0]
         self.lum_pow = lum_index
-        self.lum_scale = lum_scale
+        self.lum_function = lum_function
         self.name = name
         self.n_gen = int(n_gen)
         self.n_model = n_model
@@ -221,14 +221,14 @@ class CosmicPopulation(Population):
         frbs = self.frbs
         # Add bolometric luminosity [erg/s]
         
-        if self.lum_scale != None:
+        if self.lum_function == 'schechter':
             
-            frbs.lum_bol = self.lum_scale * dis.schechter(self.lum_min/self.lum_scale,
-                                                          self.lum_max/self.lum_scale,
-                                                          self.lum_pow,
-                                                          shape).astype(np.float64)
+            frbs.lum_bol = dis.schechter(self.lum_min,
+                                         self.lum_max,
+                                         self.lum_pow,
+                                         shape).astype(np.float64)
             
-        else:
+        elif self.lum_function == 'powerlaw':
         
             frbs.lum_bol = dis.powerlaw(self.lum_min,
                                         self.lum_max,
